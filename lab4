@@ -1,0 +1,70 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <limits>
+#include <unordered_map>
+#include <string>
+#include <chrono>
+
+using namespace std;
+using namespace std::chrono;
+
+const double INF = numeric_limits<double>::infinity();
+
+vector<string> shortestPath(unordered_map<string, unordered_map<string, double>>& graph, 
+                          const string& start, const string& end) {
+    unordered_map<string, double> distances;
+    unordered_map<string, string> previous;
+    priority_queue<pair<double, string>, vector<pair<double, string>>, greater<>> pq;
+    
+    for (auto& node : graph) {
+        distances[node.first] = INF;
+    }
+    distances[start] = 0;
+    pq.push({0, start});
+    
+    while (!pq.empty()) {
+        string current = pq.top().second;
+        pq.pop();
+        
+        for (auto& neighbor : graph[current]) {
+            double new_dist = distances[current] + neighbor.second;
+            if (new_dist < distances[neighbor.first]) {
+                distances[neighbor.first] = new_dist;
+                previous[neighbor.first] = current;
+                pq.push({new_dist, neighbor.first});
+            }
+        }
+    }
+    
+    vector<string> path;
+    for (string at = end; at != ""; at = previous[at]) {
+        path.push_back(at);
+    }
+    reverse(path.begin(), path.end());
+    
+    return path;
+}
+
+int main() {
+    unordered_map<string, unordered_map<string, double>> graph = {
+        {"A", {{"B", 5}, {"C", 2}, {"D", 4}}},
+        {"B", {{"A", 5}, {"C", 3}, {"D", 6}}},
+        {"C", {{"A", 2}, {"B", 3}, {"D", 1}}},
+        {"D", {{"A", 4}, {"B", 6}, {"C", 1}}}
+    };
+    
+    auto start_time = high_resolution_clock::now();
+    vector<string> path = shortestPath(graph, "A", "D");
+    auto end_time = high_resolution_clock::now();
+    
+    auto duration = duration_cast<microseconds>(end_time - start_time);
+    
+    cout << "Кратчайший путь: ";
+    for (const auto& node : path) {
+        cout << node << " ";
+    }
+    cout << "\nВремя выполнения: " << duration.count() << " микросекунд" << endl;
+    
+    return 0;
+}
