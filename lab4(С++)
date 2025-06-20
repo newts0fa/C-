@@ -1,0 +1,94 @@
+#include <iostream>
+#include <vector>
+#include <thread>
+#include <algorithm>
+#include <chrono>
+#include <random>
+
+using namespace std;
+using namespace std::chrono;
+
+const int THRESHOLD = 1000;
+
+int partition(vector<int>& arr, int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;
+    for (int j = low; j < high; j++) {
+        if (arr[j] <= pivot) {
+            i++;
+            swap(arr[i], arr[j]);
+        }
+    }
+    swap(arr[i + 1], arr[high]);
+    return i + 1;
+}
+
+void quick_sort(vector<int>& arr, int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quick_sort(arr, low, pi - 1);
+        quick_sort(arr, pi + 1, high);
+    }
+}
+
+void parallel_quick_sort(vector<int>& arr, int low, int high, int num_threads) {
+    if (low >= high) return;
+
+    if (high - low < THRESHOLD || num_threads <= 1) {
+        quick_sort(arr, low, high);
+        return;
+    }
+
+    int pi = partition(arr, low, high);
+
+    thread left_thread([&]() {
+        parallel_quick_sort(arr, low, pi - 1, num_threads / 2);
+    });
+
+    parallel_quick_sort(arr, pi + 1, high, num_threads / 2);
+    left_thread.join();
+}
+
+vector<int> generate_array(int size) {
+    vector<int> arr(size);
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> dis(0, 100000);
+    for (int& num : arr) {
+        num = dis(gen);
+    }
+    return arr;
+}
+
+double measure_time(function<void(vector<int>&, int, int, int)> sort_func, vector<int> arr, int num_threads) {
+    auto start = high_resolution_clock::now();
+    sort_func(arr, 0, arr.size() - 1, num_threads);
+    auto end = high_resolution_clock::now();
+    duration<double> diff = end - start;
+    return diff.count();
+}
+
+int main() {
+    vector<int> sizes = {100, 1000, 10000, 20000, 30000, 40000, 50000};
+    vector<int> threads = {1, 2, 4, 8};
+
+    cout << "Размер массива | 1 поток | 2 потока | 4 потока | 8 потоков" << endl;
+    cout << "--------------------------------------------------------" << endl;
+
+    for (int size : sizes) {
+        vector<int> arr = generate_array(size);
+        vector<double> times;
+
+        for (int t : threads) {
+            vector<int> arr_copy = arr;
+            double time_taken = measure_time(parallel_quick_sort, arr_copy, t);
+            times.push_back(time_taken);
+        }
+
+        printf("%12d | %.6f | %.6f | %.6f | %.6f\n", 
+               size, times[0], times[1], times[2], times[3]);
+    }
+
+    return 0;
+}
+
