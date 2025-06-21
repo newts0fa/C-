@@ -33,7 +33,7 @@ def parallel_quicksort(arr, num_threads=1):
     right = [x for x in arr if x > pivot]
 
     if num_threads > 1:
-        with ThreadPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=8) as executor:
             futures = []
             half_threads = max(1, num_threads // 2)
             futures.append(executor.submit(parallel_quicksort, left, half_threads))
